@@ -29,35 +29,32 @@ public class Server {
                 Thread.sleep(500);
                 continue;
             }
-            System.out.println("有感兴趣的事件");
             Set<SelectionKey> selectionKeys = selector.selectedKeys();
             Iterator<SelectionKey> iterator = selectionKeys.iterator();
             while (iterator.hasNext()) {
                 SelectionKey key = iterator.next();
                 iterator.remove();
                 if (key.isAcceptable()) {
-                    System.out.println("有链接！！！！！！！");
-                    ServerSocketChannel channel = (ServerSocketChannel) key.channel();
-                    SocketChannel accept = channel.accept();
-                    accept.configureBlocking(false);
-                    accept.register(selector, SelectionKey.OP_READ);
-                } else if (key.isReadable()) {
+                    ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
+                    SocketChannel channel = serverChannel.accept();
+                    channel.configureBlocking(false);
+                    ByteBuffer byt = ByteBuffer.allocate(16).put("Hello".getBytes());
+                    byt.flip();
+                    channel.write(byt);
+                    // 注册读
+                    channel.register(selector, SelectionKey.OP_READ);
+                } else {
                     SocketChannel channel = (SocketChannel) key.channel();
-                    ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+                    // 读之后原样将信息返回
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(16);
                     channel.read(byteBuffer);
-                    byte[] bytes = new byte[byteBuffer.remaining()];
-                    byteBuffer.get(bytes);
-                    System.out.println("得到信息：：： " + Arrays.toString(bytes));
-//                    doWrite(channel);
+                    byte[] info = byteBuffer.array();
+                    System.out.println("接收到" + new String(info));
+                    byteBuffer.flip();
+                    channel.write(byteBuffer);
+                    System.out.println("已发送");
                 }
             }
         }
     }
-
-//    private static void doWrite(SocketChannel channel) throws IOException {
-//        ByteBuffer allocate = ByteBuffer.allocate(128);
-//        allocate.put("我收到啦！！！".getBytes());
-//        allocate.flip();
-//        channel.write(allocate);
-//    }
 }

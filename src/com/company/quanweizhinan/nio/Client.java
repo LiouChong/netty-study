@@ -2,7 +2,7 @@ package com.company.quanweizhinan.nio;
 
 import com.sun.org.apache.bcel.internal.generic.Select;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectableChannel;
@@ -25,32 +25,35 @@ public class Client {
         Selector selector = Selector.open();
         socketChannel.configureBlocking(false);
         socketChannel.connect(new InetSocketAddress(8080));
-        socketChannel.register(selector, SelectionKey.OP_WRITE | SelectionKey.OP_READ);
+        socketChannel.register(selector, SelectionKey.OP_CONNECT);
 
         while (true) {
-            if(selector.select() == 0) {
-                System.out.println("等待中..");
-                Thread.sleep(1000);
-                continue;
-            }
-            System.out.println("有感兴趣的事件");
+            selector.select();
             Set<SelectionKey> selectionKeys = selector.selectedKeys();
             Iterator<SelectionKey> iterator = selectionKeys.iterator();
             while (iterator.hasNext()) {
                 SelectionKey selectionKey = iterator.next();
                 SocketChannel channel = (SocketChannel) selectionKey.channel();
-
-                if (selectionKey.isWritable()) {
-                    ByteBuffer allocate = ByteBuffer.allocate(128);
-                    allocate.put("你好啊".getBytes(StandardCharsets.UTF_8));
+                channel.configureBlocking(false);
+                if (selectionKey.isReadable()) {
+                    // 读取server返回的信息
+                    ByteBuffer allocate = ByteBuffer.allocate(16);
+                    channel.read(allocate);
+                    allocate.flip();
+                    byte[] bytes = allocate.array();
+                    System.out.println(new String(bytes));
+                    // 从控制台输入
+                    allocate.clear();
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+                    allocate.put(bufferedReader.readLine().getBytes());
                     allocate.flip();
                     channel.write(allocate);
-                } else if (selectionKey.isReadable()) {
-                    ByteBuffer allocate = ByteBuffer.allocate(128);
-                    channel.read(allocate);
-                    byte[] bytes = new byte[allocate.limit()];
-                    allocate.get(bytes);
-                    System.out.println(Arrays.toString(bytes));
+                } else {
+                    // 注册读写
+                    if (channel.isConnectionPending()) {
+                        channel.finishConnect();
+                    }
+                    channel.register(selector, SelectionKey.OP_READ);
                 }
                 iterator.remove();
             }

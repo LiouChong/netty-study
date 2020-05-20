@@ -19,30 +19,7 @@ import java.nio.charset.CharsetDecoder;
  */
 public class RevDemo {
     public static void main(String[] args) throws IOException {
-        Charset charset = Charset.forName("UTF-8");
-        CharsetDecoder decoder = charset.newDecoder();
 
-        ServerSocketChannel channel = ServerSocketChannel.open();
-        channel.socket().bind(new InetSocketAddress(8090));
-        // 设置非阻塞，这样单个线程才可以切换channel
-        channel.configureBlocking(false);
-        ByteBuffer allocate = ByteBuffer.allocate(16);
-        CharBuffer charBuffer = CharBuffer.allocate(16);
-        while (true) {
-            SocketChannel accept = channel.accept();
-            if (accept != null) {
-                System.out.println("打开一个socket");
-                while (accept.read(allocate) != -1) {
-                    allocate.flip();
-                    decoder.decode(allocate, charBuffer, false);
-                    charBuffer.flip();
-                    System.out.print(charBuffer);
-
-                    allocate.clear();
-                    charBuffer.clear();
-                }
-            }
-        }
     }
 }
 
