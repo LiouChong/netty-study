@@ -16,10 +16,10 @@ import java.util.Scanner;
  * Description:
  * date: 2020/5/6 11:57
  */
-public class ClientOne {
+public class ClientTwo {
 
     public static void main(String[] args) throws IOException {
-        String name = "刘冲";
+        String name = "钟湘";
 
         Selector selector = Selector.open();
 

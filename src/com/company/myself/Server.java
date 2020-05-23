@@ -1,18 +1,12 @@
 package com.company.myself;
 
 
-import jdk.internal.org.objectweb.asm.ByteVector;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
-import java.security.spec.RSAOtherPrimeInfo;
 import java.util.Iterator;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -24,30 +18,37 @@ public class Server {
     public static void main(String[] args) throws IOException, InterruptedException {
         Selector selector = Selector.open();
 
-        SocketChannel socketChannel = SocketChannel.open();
-        socketChannel.bind(new InetSocketAddress(8080));
-        socketChannel.configureBlocking(false);
-        socketChannel.register(selector, SelectionKey.OP_ACCEPT);
+        // 绑定8080
+        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+        serverSocketChannel.bind(new InetSocketAddress(8080));
+        serverSocketChannel.configureBlocking(false);
+        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-        while (selector.select() == 0) {
-            System.out.println("等等……");
-            Thread.sleep(500);
-        }
-
-       Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
-        while (iterator.hasNext()) {
-            SelectionKey selectionKey = iterator.next();
-
-            if (selectionKey.isAcceptable()){
-                SocketChannel channel = (SocketChannel) selectionKey.channel();
-                channel.configureBlocking(false);
-                channel.register(selector, SelectionKey.OP_READ);
-            } else if (selectionKey.isReadable()){
-                String msg = revMsg(selectionKey);
-
+        while (true) {
+            if (selector.select() == 0) {
+                System.out.println("等等……");
+                Thread.sleep(500);
+                continue;
             }
 
-            iterator.remove();
+            Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
+            while (iterator.hasNext()) {
+                SelectionKey selectionKey = iterator.next();
+                if (selectionKey.isAcceptable()) {
+                    // 有新连接则注册读事件
+                    ServerSocketChannel serverSocket = (ServerSocketChannel) selectionKey.channel();
+                    SocketChannel socketChannel = serverSocket.accept();
+                    socketChannel.configureBlocking(false);
+                    socketChannel.register(selector, SelectionKey.OP_READ);
+                    socketChannel.write(StandardCharsets.UTF_8.encode("您和其他人不是好友，请注意安全！"));
+                } else if (selectionKey.isReadable()) {
+                    // 有读事件则广播给其他SocketChannel
+                    SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+                    String msg = revMsg(selectionKey);
+                    broadcastToUser(selector, socketChannel, msg);
+                }
+                iterator.remove();
+            }
         }
     }
 
@@ -61,10 +62,18 @@ public class Server {
         return stringBuilder.toString();
     }
 
-    private static void broadcastToUser(Selector selector, SocketChannel sourceChannel) {
+    private static void broadcastToUser(Selector selector, SocketChannel sourceChannel, String msg) {
         Set<SelectionKey> keys = selector.keys();
-        keys.forEach(item -> {
-
-        })  ;
+        keys.forEach(selectionKey -> {
+            SelectableChannel channel = selectionKey.channel();
+            if (channel instanceof SocketChannel && !channel.equals(sourceChannel)) {
+                try {
+                    SocketChannel socketChannel = (SocketChannel) channel;
+                    socketChannel.write(StandardCharsets.UTF_8.encode(msg));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 }
