@@ -1,4 +1,4 @@
-package com.company.netty.time.client;
+package com.company.netty.time.zhanbao.client;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;

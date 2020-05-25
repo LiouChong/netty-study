@@ -1,4 +1,4 @@
-package com.company.netty.time.server;
+package com.company.netty.time.zhanbao.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -9,26 +9,29 @@ import java.util.Date;
 
 /**
  * Author: Liuchong
- * Description:
+ * Description: 会导致粘包的demo
  * date: 2020/5/23 14:21
  */
 public class TimeServerHandler extends ChannelHandlerAdapter {
     public static final String QUERY = "Query Time Order";
+
+    private int counter;
+
     // 每读取到一条消息
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        // msg 转换为 ByteBuf，类似ButeBuffer对象，不过提供了更强大和灵活的功能
         ByteBuf buf = (ByteBuf) msg;
-        // 根据可读取的字节数，创建字节数组
         byte[] req = new byte[buf.readableBytes()];
-        // 将数据读取到数组中
         buf.readBytes(req);
-        String body = new String(req, "UTF-8");
-        System.out.println("The time server receive order : " + body);
+        String body = new String(req, "UTF-8").substring(0, req.length - System.getProperty("line.separator").length());
+        System.out.println("The time server receive order ：" + body + "; the counter is ：" + ++counter);
 
-        String curTime = QUERY.equalsIgnoreCase(body)? new Date(System.currentTimeMillis()).toString() : "BAD ORDER";;
-        ByteBuf resp = Unpooled.copiedBuffer(curTime.getBytes());
-        ctx.write(resp);
+        String currentTime = QUERY.equalsIgnoreCase(body) ? new Date(System.currentTimeMillis()).toString() : "BAD ORDER";
+
+        currentTime = currentTime + System.getProperty("line.separator");
+        ByteBuf resp = Unpooled.copiedBuffer(currentTime.getBytes());
+
+        ctx.writeAndFlush(resp);
     }
 
     // 读取完毕

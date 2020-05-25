@@ -1,6 +1,6 @@
-package com.company.netty.time.client;
+package com.company.netty.time.zhanbao.client;
 
-import com.company.netty.time.server.TimeServerHandler;
+import com.company.netty.time.zhanbao.server.TimeServerHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -10,23 +10,28 @@ import java.util.logging.Logger;
 
 /**
  * Author: Liuchong
- * Description:
+ * Description: 会导致粘包的demo
  * date: 2020/5/23 14:59
  */
 public class TimeClientHandler extends ChannelHandlerAdapter {
     private static final Logger logger = Logger.getLogger(TimeClientHandler.class.getName());
 
-    private final ByteBuf firstMessage;
+    private int counter;
+
+    private byte[] req;
 
     public TimeClientHandler() {
-        byte[] req = TimeServerHandler.QUERY.getBytes();
-        firstMessage = Unpooled.buffer(TimeServerHandler.QUERY.getBytes().length);
-        firstMessage.writeBytes(req);
+        req = (TimeServerHandler.QUERY + System.getProperty("line.separator")).getBytes();
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ctx.writeAndFlush(firstMessage);
+        ByteBuf message = null;
+        for (int i = 0; i < 100; i++) {
+            message = Unpooled.buffer(req.length);
+            message.writeBytes(req);
+            ctx.writeAndFlush(message);
+        }
     }
 
     @Override
@@ -35,7 +40,7 @@ public class TimeClientHandler extends ChannelHandlerAdapter {
         byte[] req = new byte[buf.readableBytes()];
         buf.readBytes(req);
         String body = new String(req, "UTF-8");
-        System.out.println("Now is : " + body);
+        System.out.println("Now is : " + body + "； + the counter is ：" + ++counter);
     }
 
     @Override
@@ -43,4 +48,5 @@ public class TimeClientHandler extends ChannelHandlerAdapter {
         logger.warning("downstream cause An Unexpected exception : " + cause.getMessage());
         ctx.close();
     }
+
 }
