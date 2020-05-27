@@ -6,6 +6,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
@@ -28,14 +29,15 @@ public class SubReqServer {
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, 100)
                     .handler(new LoggingHandler(LogLevel.INFO))
-                    .childHandler(new ChannelInitializer<ServerChannel>() {
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        protected void initChannel(ServerChannel ch) throws Exception {
+                        protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline().addLast(
                                     // 将单个对象最大序列化后的字节数组长度设置为1M
                                     new ObjectDecoder(1024 * 1024,
                                             ClassResolvers.weakCachingConcurrentResolver(this.getClass().getClassLoader()))
                             );
+                            // 消息发送的时候自动将实现serializable的pojo对象进行编码，因此用户无需亲自手工序列化
                             ch.pipeline().addLast(new ObjectEncoder());
                             ch.pipeline().addLast(new SubReqServerHandler());
                         }

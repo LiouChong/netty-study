@@ -1,4 +1,4 @@
-package com.company.netty.order.server;
+package com.company.netty.order;
 
 import java.io.Serializable;
 
